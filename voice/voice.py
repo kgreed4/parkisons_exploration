@@ -94,7 +94,7 @@ def get_user_voice_memo(input_file):
     # Check if the input file is an MP3
     if os.path.splitext(input_file)[1].lower() != '.mp3':
         # If not, convert it to MP3
-        subprocess.run(['ffmpeg', '-i', input_file, '-acodec', 'libmp3lame', '-q:a', '2', 'output.mp3'])
+        subprocess.run(['ffmpeg', '-y', '-i', input_file, '-acodec', 'libmp3lame', '-q:a', '2', 'output.mp3'])
         
         # Add main directory to path
         sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
