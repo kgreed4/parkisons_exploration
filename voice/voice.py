@@ -1,5 +1,6 @@
 import os
 import torch
+import sys
 import numpy as np
 from tensorflow.keras.models import load_model
 import librosa
@@ -94,9 +95,12 @@ def get_user_voice_memo(input_file):
     if os.path.splitext(input_file)[1].lower() != '.mp3':
         # If not, convert it to MP3
         subprocess.run(['ffmpeg', '-i', input_file, '-acodec', 'libmp3lame', '-q:a', '2', 'output.mp3'])
+        
+        # Add main directory to path
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
         # Save path to the converted file
-        input_file = '/content/output.mp3'
+        input_file = 'output.mp3'
 
     y, sr = load_audio(input_file)
     features = extract_features(y, sr)
@@ -112,7 +116,7 @@ Parameters:
 Returns:
     voice_model (tensorflow.keras.Model): The saved model
 '''
-def load_voice_model(model_path='./voice_memo_model.h5'):
+def load_voice_model(model_path='voice/voice_memo_model.h5'):
     # Load the saved model
     return load_model(model_path)
 
@@ -133,7 +137,8 @@ def make_prediction(voice_memo_path):
     voice_model = load_voice_model()
 
     # Make a prediction
-    voice_memo_predictions = voice_model.predict([voice_memo_features])
+    voice_memo_predictions = voice_model.predict([np.array([voice_memo_features])])
+    print('Voice Memo Predictions:', voice_memo_predictions)
 
     return voice_memo_predictions
 
