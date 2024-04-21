@@ -12,7 +12,7 @@ import subprocess
 from datetime import timedelta
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import StandardScaler
-import HTML
+# from html import HTML
 import joblib
 from tensorflow.keras.models import load_model
 
@@ -190,16 +190,16 @@ def draw_prediction_on_image(
          interpolation=cv2.INTER_CUBIC)
   return image_from_plot
 
-def progress(value, max=100):
-  return HTML("""
-      <progress
-          value='{value}'
-          max='{max}',
-          style='width: 100%'
-      >
-          {value}
-      </progress>
-  """.format(value=value, max=max))
+# def progress(value, max=100):
+#   return HTML("""
+#       <progress
+#           value='{value}'
+#           max='{max}',
+#           style='width: 100%'
+#       >
+#           {value}
+#       </progress>
+#   """.format(value=value, max=max))
 
 def movenet(input_image, interpreter):
     """Runs detection on an input image.
@@ -616,6 +616,31 @@ def analyze_video(df):
   return output_df
 
 '''
+This function processes the video frames.
+
+Parameters:
+    video_path (str): The path to the input video
+
+Returns:
+    frames (numpy.ndarray): The processed video frames
+'''
+def process_video_frames(video_path):
+      cap = cv2.VideoCapture(video_path)
+      frames = []
+      while True:
+          ret, frame = cap.read()
+          if not ret:
+              break
+
+          frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert to RGB
+          frame = cv2.resize(frame, (224, 224))  # Resize the frame
+          frame_tensor = tf.convert_to_tensor(frame, dtype=tf.float32) / 255.0
+          frames.append(frame_tensor)
+
+      cap.release()
+      return tf.stack(frames)  # Stack into one tensor
+
+'''
 This function performs pose estimation on the input video.
 
 Parameters:
@@ -627,13 +652,16 @@ Returns:
 def pose_estimation(video_path):
 
   # Initialize the TFLite interpreter
-  interpreter = tf.lite.Interpreter(model_path="model.tflite")
+  interpreter = tf.lite.Interpreter(model_path="sts/model.tflite")
   interpreter.allocate_tensors()
 
   # Load and preproces the video
   video = tf.io.read_file(video_path)
-  image = tfio.experimental.ffmpeg.decode_video(video)
-  
+
+  # TFIO.ffmpeg.decode_video does not work locally on MacOS
+  # image = tfio.experimental.ffmpeg.decode_video(video)
+  image = process_video_frames(video_path)
+
   # Set input size based upon model, default 192
   input_size = 192
 
@@ -656,7 +684,7 @@ Returns:
 '''
 def organize_data_for_classification(df):
   # Load the label encoder
-  label_encoder = joblib.load('label_encoder.pkl')
+  label_encoder = joblib.load('sts/label_encoder.pkl')
   
   # Encode categorical features
   df['On_or_Off_medication'] = label_encoder.fit_transform(df['On_or_Off_medication'])
@@ -677,7 +705,7 @@ Parameters:
 Returns:
     sts_model (tensorflow.keras.Model): The saved model
 '''
-def load_classification_model(model_path='./sts_model.h5'):
+def load_classification_model(model_path='sts/sts_model.h5'):
   # Load the saved model
   return load_model(model_path)
 
@@ -708,7 +736,7 @@ Parameters:
 Returns:
     sts_predictions (numpy.ndarray): Prediction probabilities
 '''
-def main(video_path='./video.mp4'):
+def main(video_path='../test-data/sts-test.MOV'):
   # Perform pose estimation
   output_df = pose_estimation(video_path)
 
