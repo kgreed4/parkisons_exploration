@@ -4,6 +4,9 @@ from PIL import Image
 from torchvision import transforms
 import torchvision.models as models
 import torch.nn as nn
+import os
+import ssl
+import sys
 
 def load_image(image_path):
     # Load image from path
@@ -32,6 +35,9 @@ Returns:
     handwriting_model (torch.nn.Module): The saved model
 '''
 def load_handwriting_model(model_path='./best_resNet50_w_weights_100.pth'):
+    # Ignore SSL errors
+    ssl._create_default_https_context = ssl._create_unverified_context
+
     # Define ResNet50 model
     handwriting_model = models.resnet50(weights=True)
 
@@ -48,6 +54,12 @@ def load_handwriting_model(model_path='./best_resNet50_w_weights_100.pth'):
                             nn.ReLU(),
                             nn.Dropout(0.2),
                             nn.Linear(256, 2))
+
+    # Add main directory to path
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+    # Specify the relative path to the model file
+    model_path = os.path.join('handwriting', 'best_resNet50_w_weights_100.pth')
 
     # Load the saved state_dict
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
