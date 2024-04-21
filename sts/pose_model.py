@@ -10,6 +10,11 @@ import matplotlib.patches as patches
 import tensorflow_io as tfio
 import subprocess
 from datetime import timedelta
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import StandardScaler
+import HTML
+import joblib
+from tensorflow.keras.models import load_model
 
 # Dictionary that maps from joint names to keypoint indices.
 KEYPOINT_DICT = {
@@ -30,6 +35,28 @@ KEYPOINT_DICT = {
     'right_knee': 14,
     'left_ankle': 15,
     'right_ankle': 16
+}
+
+# Maps bones to a matplotlib color name.
+KEYPOINT_EDGE_INDS_TO_COLOR = {
+    (0, 1): 'm',
+    (0, 2): 'c',
+    (1, 3): 'm',
+    (2, 4): 'c',
+    (0, 5): 'm',
+    (0, 6): 'c',
+    (5, 7): 'm',
+    (7, 9): 'm',
+    (6, 8): 'c',
+    (8, 10): 'c',
+    (5, 6): 'y',
+    (5, 11): 'm',
+    (6, 12): 'c',
+    (11, 12): 'y',
+    (11, 13): 'm',
+    (13, 15): 'm',
+    (12, 14): 'c',
+    (14, 16): 'c'
 }
 
 # Confidence score to determine whether a keypoint prediction is reliable.
@@ -174,7 +201,7 @@ def progress(value, max=100):
       </progress>
   """.format(value=value, max=max))
 
-def movenet(input_image):
+def movenet(input_image, interpreter):
     """Runs detection on an input image.
 
     Args:
@@ -339,7 +366,7 @@ def crop_and_resize(image, crop_region, crop_size):
       image, box_indices=[0], boxes=boxes, crop_size=crop_size)
   return output_image
 
-def run_inference(movenet, image, crop_region, crop_size):
+def run_inference(movenet, image, crop_region, crop_size, interpreter):
   """Runs model inference on the cropped region.
 
   The function runs the model inference on the cropped region and updates the
@@ -349,7 +376,7 @@ def run_inference(movenet, image, crop_region, crop_size):
   input_image = crop_and_resize(
     tf.expand_dims(image, axis=0), crop_region, crop_size=crop_size)
   # Run model inference.
-  keypoints_with_scores = movenet(input_image)
+  keypoints_with_scores = movenet(input_image, interpreter)
   # Update the coordinates.
   for idx in range(17):
     keypoints_with_scores[0, 0, idx, 0] = (
@@ -362,7 +389,19 @@ def run_inference(movenet, image, crop_region, crop_size):
         keypoints_with_scores[0, 0, idx, 1]) / image_width
   return keypoints_with_scores
 
-def extract_video_data():
+'''
+This function extracts the video data from the input video.
+
+Parameters:
+    image (numpy.ndarray): The input image
+    video_path (str): The path to the video
+    input_size (int): The input size of the model
+    interpreter (tf.lite.Interpreter): The TFLite interpreter
+    
+Returns:
+    df (pandas.DataFrame): The dataframe containing the extracted video data
+'''
+def extract_video_data(image, video_path, input_size, interpreter):
 
     label_list = []
     label_list = ['frame #', 'time']
@@ -400,7 +439,7 @@ def extract_video_data():
         # Get keypoints
         keypoints_with_scores = run_inference(
             movenet, image[frame_idx, :, :, :], crop_region,
-            crop_size=[input_size, input_size])
+            crop_size=[input_size, input_size], interpreter=interpreter)
 
         # Calculate the timestamp for the current frame.
         frame_time = time_interval * frame_idx
@@ -421,6 +460,12 @@ def extract_video_data():
 
 '''
 This function ges the input from the user and sets the attributes of the output_df.
+
+Parameters:
+    output_df (pandas.DataFrame): The output dataframe
+
+Returns:
+    output_df (pandas.DataFrame): The output dataframe with the user input
 '''
 def get_user_input(output_df):
   # Get input from the user
@@ -434,6 +479,13 @@ def get_user_input(output_df):
 
 '''
 This function calculates the sts_whole_episode_duration.
+
+Parameters:
+    df (pandas.DataFrame): The dataframe containing the extracted video data
+    output_df (pandas.DataFrame): The output dataframe
+
+Returns:
+    output_df (pandas.DataFrame): The output dataframe with the sts_whole_episode_duration
 '''
 def calculate_sts_whole_episode_duration(df, output_df):
   # Get frame 3 time
@@ -450,6 +502,16 @@ def calculate_sts_whole_episode_duration(df, output_df):
 
   return output_df
 
+'''
+This function calculates the sts_final_attempt_duration.
+
+Parameters:
+    df (pandas.DataFrame): The dataframe containing the extracted video data
+    output_df (pandas.DataFrame): The output dataframe
+
+Returns:
+    output_df (pandas.DataFrame): The output dataframe with the sts_final_attempt_duration
+'''
 def calculate_sts_final_attempt_duration(df, output_df):
   # Duration in seconds of "final attempt duration" label in milliseconds, comprising their impression of the duration between the lowest point of the head (start)
   # and when the person was fully upright/the maximum vertical position of the vertex of the head (end).
@@ -482,6 +544,16 @@ def calculate_sts_final_attempt_duration(df, output_df):
 
   return output_df
 
+'''
+This function calculates the MDS-UPDRS score 3.9 arising from chair and STS additional features.
+
+Parameters:
+    df (pandas.DataFrame): The dataframe containing the extracted video data
+    output_df (pandas.DataFrame): The output dataframe
+
+Returns:
+    output_df (pandas.DataFrame): The output dataframe with the MDS-UPDRS score 3.9 arising from chair and STS additional features
+  '''
 def calculate_MDS_UPDRS_score_3_9_and_STS_additional_features(df, output_df):
   mds_score = 0
   STS_additional_features = []
@@ -516,43 +588,137 @@ def calculate_MDS_UPDRS_score_3_9_and_STS_additional_features(df, output_df):
 
   return output_df
 
+'''
+This function analyzes the video to obtain the data needed for the classification model.
+
+Parameters:
+    df (pandas.DataFrame): The dataframe containing the extracted video data
+
+Returns:
+    output_df (pandas.DataFrame): The output dataframe containing the data needed for the classification model
+'''
 def analyze_video(df):
-    # Create output dataframe
-    output_df = pd.DataFrame(columns=['sts_whole_episode_duration','sts_final_attempt_duration','On_or_Off_medication','DBS_state','STS_additional_features','MDS-UPDRS_score_3.9 _arising_from_chair'])
+  # Create output dataframe
+  output_df = pd.DataFrame(columns=['sts_whole_episode_duration','sts_final_attempt_duration','On_or_Off_medication','DBS_state','STS_additional_features','MDS-UPDRS_score_3.9 _arising_from_chair'])
 
-    # Get user input
-    output_df = get_user_input(output_df)
+  # Get user input
+  output_df = get_user_input(output_df)
 
-    # Calculate sts_whole_episode_duration
-    output_df = calculate_sts_whole_episode_duration(df, output_df)
+  # Calculate sts_whole_episode_duration
+  output_df = calculate_sts_whole_episode_duration(df, output_df)
 
-    # Calculate sts_final_attempt_duration 
-    output_df = calculate_sts_final_attempt_duration(df, output_df)
+  # Calculate sts_final_attempt_duration 
+  output_df = calculate_sts_final_attempt_duration(df, output_df)
 
-    # Calculate MDS and STS additional features
-    output_df = calculate_MDS_UPDRS_score_3_9_and_STS_additional_features(df, output_df)
+  # Calculate MDS and STS additional features
+  output_df = calculate_MDS_UPDRS_score_3_9_and_STS_additional_features(df, output_df)
 
-    return output_df
+  return output_df
+
+'''
+This function performs pose estimation on the input video.
+
+Parameters:
+    video_path (str): The path to the input video
+    
+Returns:
+    output_df (pandas.DataFrame): The output dataframe containing the extracted video data
+'''
+def pose_estimation(video_path):
+
+  # Initialize the TFLite interpreter
+  interpreter = tf.lite.Interpreter(model_path="model.tflite")
+  interpreter.allocate_tensors()
+
+  # Load and preproces the video
+  video = tf.io.read_file(video_path)
+  image = tfio.experimental.ffmpeg.decode_video(video)
+  
+  # Set input size based upon model, default 192
+  input_size = 192
+
+  # Extract video data
+  df = extract_video_data(image, video_path, input_size, interpreter)
+
+  # Analyze video to obtain data needed for classification model
+  output_df = analyze_video(df)
+
+  return output_df
+
+'''
+This function organizes the data for the classification model.
+
+Parameters:
+    df (pandas.DataFrame): The dataframe containing the extracted video data
+
+Returns:
+    X (numpy.ndarray): The standardized features
+'''
+def organize_data_for_classification(df):
+  # Load the label encoder
+  label_encoder = joblib.load('label_encoder.pkl')
+  
+  # Encode categorical features
+  df['On_or_Off_medication'] = label_encoder.fit_transform(df['On_or_Off_medication'])
+  df['STS_additional_features'] = label_encoder.fit_transform(df['STS_additional_features'])
+  df['DBS_state'] = label_encoder.fit_transform(df['DBS_state'])
+
+  # Standardize features
+  scaler = StandardScaler()
+  X = scaler.fit_transform(df)
+  return X
+
+'''
+This function loads the classification model.
+
+Parameters:
+    model_path (str): Path to the saved model
+
+Returns:
+    sts_model (tensorflow.keras.Model): The saved model
+'''
+def load_classification_model(model_path='./sts_model.h5'):
+  # Load the saved model
+  return load_model(model_path)
+
+'''
+This function makes predictions using the classification model.
+
+Parameters:
+    sts_input (numpy.ndarray): The standardized features
+
+Returns:
+    sts_predictions (numpy.ndarray): Prediction probabilities
+'''
+def make_predicitions(sts_input):
+  # Load the classification model
+  sts_model = load_classification_model()
+
+  # Make a prediction
+  sts_predictions = sts_model.predict(sts_input)
+
+  return sts_predictions
+
+'''
+This function performs the entire sts score prediction process.
+
+Parameters:
+    video_path (str): The path to the input video
+    
+Returns:
+    sts_predictions (numpy.ndarray): Prediction probabilities
+'''
+def main(video_path='./video.mp4'):
+  # Perform pose estimation
+  output_df = pose_estimation(video_path)
+
+  # Analyze video to obtain data needed for classification model
+  sts_input = organize_data_for_classification(output_df)
+
+  # Make predictions
+  sts_predictions = make_predicitions(sts_input)
+
+  return sts_predictions
 
 if __name__ == "__main__":
-    def main():
-        model_name = "movenet_lightning_f16.tflite"
-        # !wget -q -O model.tflite https://tfhub.dev/google/lite-model/movenet/singlepose/lightning/tflite/float16/4?lite-format=tflite
-        input_size = 192
-
-        # Initialize the TFLite interpreter
-        interpreter = tf.lite.Interpreter(model_path="model.tflite")
-        interpreter.allocate_tensors()
-
-        # Load and preproces the video
-        video_path = '/content/IMG_8295.MOV'
-        video = tf.io.read_file(video_path)
-        image = tfio.experimental.ffmpeg.decode_video(video)
-        
-        # Extract video data
-        df = extract_video_data()
-
-        # Analyze video to obtain data needed for classification model
-        output_df = analyze_video(df)
-
-        return output_df
+  main()
