@@ -2,3 +2,4 @@ libsndfile1
 libsndfile1-dev
 libgl1-mesa-glx
 libgl1-mesa-dev
+ffmpeg
