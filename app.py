@@ -1,9 +1,9 @@
 # app.py
 import streamlit as st
 from PIL import Image
-import io
-import cv2
-import numpy as np
+# import io
+# import cv2
+# import numpy as np
 from streamlit_drawable_canvas import st_canvas
 from audiorecorder import audiorecorder
 from progression_score.create_score import create_progression_score
