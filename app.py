@@ -5,7 +5,6 @@ import io
 import cv2
 import numpy as np
 from streamlit_drawable_canvas import st_canvas
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
 from audiorecorder import audiorecorder
 from progression_score.create_score import create_progression_score
     
