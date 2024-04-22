@@ -1,11 +1,11 @@
-# app.py
+import sys
+import os
 import streamlit as st
 from PIL import Image
-# import io
-# import cv2
-# import numpy as np
 from streamlit_drawable_canvas import st_canvas
 from audiorecorder import audiorecorder
+# Add main directory to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from progression_score.create_score import create_progression_score
     
 def main():
