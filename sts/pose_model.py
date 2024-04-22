@@ -190,17 +190,6 @@ def draw_prediction_on_image(
          interpolation=cv2.INTER_CUBIC)
   return image_from_plot
 
-# def progress(value, max=100):
-#   return HTML("""
-#       <progress
-#           value='{value}'
-#           max='{max}',
-#           style='width: 100%'
-#       >
-#           {value}
-#       </progress>
-#   """.format(value=value, max=max))
-
 def movenet(input_image, interpreter):
     """Runs detection on an input image.
 
@@ -467,14 +456,10 @@ Parameters:
 Returns:
     output_df (pandas.DataFrame): The output dataframe with the user input
 '''
-def get_user_input(output_df):
-  # Get input from the user
-  on_off_medication = input("On or Off medication: ") #either On medication, Off medication
-  dbs_state = input("DBS state: ") # If healthy control participant: always "Control". If participant with Parkinson's disease: either "On DBS" (deep brain stimulator switched on or within 1 hour of it being switched off), "Off DBS" (1 hour or longer after deep brain stimulator switched off until it is switched back on again) or "-" (no deep brain stimulator in situ).
-
+def get_user_input(output_df, medication_status, dbs_status):
   # Set attributes inputted to output_df
-  output_df.loc[0, 'On_or_Off_medication'] = on_off_medication
-  output_df.loc[0, 'DBS_state'] = dbs_state
+  output_df.loc[0, 'On_or_Off_medication'] = medication_status
+  output_df.loc[0, 'DBS_state'] = dbs_status
   return output_df
 
 '''
@@ -597,12 +582,12 @@ Parameters:
 Returns:
     output_df (pandas.DataFrame): The output dataframe containing the data needed for the classification model
 '''
-def analyze_video(df):
+def analyze_video(df, medication_status, dbs_status):
   # Create output dataframe
   output_df = pd.DataFrame(columns=['sts_whole_episode_duration','sts_final_attempt_duration','On_or_Off_medication','DBS_state','STS_additional_features','MDS-UPDRS_score_3.9 _arising_from_chair'])
 
   # Get user input
-  output_df = get_user_input(output_df)
+  output_df = get_user_input(output_df, medication_status, dbs_status)
 
   # Calculate sts_whole_episode_duration
   output_df = calculate_sts_whole_episode_duration(df, output_df)
@@ -649,7 +634,7 @@ Parameters:
 Returns:
     output_df (pandas.DataFrame): The output dataframe containing the extracted video data
 '''
-def pose_estimation(video_path):
+def pose_estimation(video_path, medication_status, dbs_status):
 
   # Initialize the TFLite interpreter
   interpreter = tf.lite.Interpreter(model_path="sts/model.tflite")
@@ -669,7 +654,7 @@ def pose_estimation(video_path):
   df = extract_video_data(image, video_path, input_size, interpreter)
 
   # Analyze video to obtain data needed for classification model
-  output_df = analyze_video(df)
+  output_df = analyze_video(df, medication_status, dbs_status)
 
   return output_df
 
@@ -736,15 +721,16 @@ Parameters:
 Returns:
     sts_predictions (numpy.ndarray): Prediction probabilities
 '''
-def main(video_path='../test-data/sts-test.MOV'):
+def main(video_path, medication_status, dbs_status):
   # Perform pose estimation
-  output_df = pose_estimation(video_path)
+  output_df = pose_estimation(video_path, medication_status, dbs_status)
 
   # Analyze video to obtain data needed for classification model
   sts_input = organize_data_for_classification(output_df)
 
   # Make predictions
   sts_predictions = make_predicitions(sts_input)
+  print('sts_predictions: ', sts_predictions)
 
   return sts_predictions
 
