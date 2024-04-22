@@ -1,4 +1,4 @@
-python_version==3.10.*
+python_version >=3.10.0,<3.11.0
 torch==2.2.2
 numpy==1.23.5
 Pillow==8.4.0
