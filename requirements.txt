@@ -9,7 +9,7 @@ tensorflow-docs==2024.2.5.73858
 pandas==1.4.0
 matplotlib==3.5.1
 tensorflow-io==0.36.0
-scikit-learn==1.0.2
+scikit-learn
 joblib==1.1.0
 librosa==0.8.1
 soundfile==0.10.3.post1
