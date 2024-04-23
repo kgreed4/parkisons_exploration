@@ -36,11 +36,6 @@ def main():
         st.warning("Please enter either 'Control', 'On DBS', 'Off DBS', or '-' for DBS status.")
         return
 
-    # Display user input
-    st.subheader("User Input:")
-    st.write(f"Medication Status: {medication_status}")
-    st.write(f"DBS Status: {dbs_status}")
-
     # Drawing input
     st.header("Draw a Picture")
     canvas_result = st_canvas(
@@ -71,7 +66,7 @@ def main():
         audio.export("audio.wav", format="wav")
 
         # To get audio properties, use pydub AudioSegment properties:
-        st.write(f"Frame rate: {audio.frame_rate}, Frame width: {audio.frame_width}, Duration: {audio.duration_seconds} seconds")
+        st.write(f"Frame rate: {audio.frame_rate}, Duration: {audio.duration_seconds} seconds")
 
     # Video input
     st.header("Upload a Video")
