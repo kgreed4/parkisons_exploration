@@ -8,7 +8,7 @@ To run this project locally, you will need to install the necessary Python packa
 
 1. Clone the repository:
    ```
-   git clone https://github.com/kgreed4/parkinsons_exploration.git
+   git clone https://github.com/kgreed4/parkinsons_progression_ai.git
    ```
 2. Navigate to the project directory:
    ```
