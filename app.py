@@ -73,9 +73,6 @@ def main():
         # To save audio to a file, use pydub export method:
         audio.export("audio.wav", format="wav")
 
-        # # To get audio properties, use pydub AudioSegment properties:
-        # st.write(f"Frame rate: {audio.frame_rate}, Duration: {audio.duration_seconds} seconds")
-
     st.divider()
 
     # Video input
@@ -97,7 +94,6 @@ def main():
             st.warning("Please provide all inputs")
         else:
             prediction = create_progression_score('drawing.png', 'audio.wav', 'uploaded_video.mp4', medication_status, dbs_status)
-            # st.success(f"Parkinson's Progression Score: {round(prediction*100, 2)}")
             st.markdown(f"<p style='font-size:20px;'>Parkinson's Progression Score: {round(prediction*100, 2)}</p>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
