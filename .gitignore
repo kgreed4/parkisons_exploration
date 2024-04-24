@@ -128,6 +128,7 @@ ENV/
 env.bak/
 venv.bak/
 PD/
+myenv/
 
 # Spyder project settings
 .spyderproject
@@ -163,3 +164,9 @@ cython_debug/
 .DS_Store
 handwriting/.DS_Store
 sts/.DS_Store
+
+# Output files
+audio.wav
+output.mp3
+drawing.png
+uploaded_video.mp4
