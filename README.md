@@ -8,7 +8,7 @@ To run this project locally, you will need to install the necessary Python packa
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your-repository/parkinsons_exploration.git
+   git clone https://github.com/kgreed4/parkinsons_exploration.git
    ```
 2. Navigate to the project directory:
    ```
@@ -28,5 +28,5 @@ streamlit run app.py
 
 This process will run `app.py` which calls each of the three models and their processing scripts.
 
-### Structure
+## Repo Structure
 There are three categoires analyzed in this application: `sts, voice, and handwriting`. Each of these has their own folder, respectively. Within each folder includes the inference script, `sts.py, handwriting.py, voice.py`, the training script, `train_sts.py, train_handwriting.py, train_voice.py`, and the trained output model(s) that are being used during inferece.
