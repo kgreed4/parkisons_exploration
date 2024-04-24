@@ -1,16 +1,10 @@
 import tensorflow as tf
-# import tensorflow_hub as hub
-# from tensorflow_docs.vis import embed
 import numpy as np
 import pandas as pd
 import cv2
-# from matplotlib import pyplot as plt
-# from matplotlib.collections import LineCollection
-# import matplotlib.patches as patches
 import subprocess
 from datetime import timedelta
 from sklearn.preprocessing import StandardScaler
-# from html import HTML
 import joblib
 from tensorflow.keras.models import load_model
 

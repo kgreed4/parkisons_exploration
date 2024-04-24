@@ -5,7 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from handwriting.handwriting import make_prediction as predict_handwriting
 from voice.voice import make_prediction as predict_voice_memo
-from sts.pose_model import main
+from sts.sts import main
 
 '''
 Create the progression score by combining the predictions from the three models
